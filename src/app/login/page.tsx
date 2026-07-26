@@ -1,6 +1,5 @@
 "use client";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -11,11 +10,21 @@ import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { Train } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-client";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/dashboard";
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -24,10 +33,10 @@ export default function LoginPage() {
     const email = String(form.get("email") || "");
     const password = String(form.get("password") || "");
     setLoading(true);
-    const res = await signIn("credentials", { email, password, redirect: false });
+    const res = login(email, password);
     setLoading(false);
-    if (res?.error) {
-      toast.error("Invalid email or password. Try the demo account: devika@metromitra.in / password123");
+    if (!res.ok) {
+      toast.error(res.error || "Invalid email or password. Try the demo account: devika@metromitra.in / password123");
       return;
     }
     toast.success("Welcome back to MetroMitra");

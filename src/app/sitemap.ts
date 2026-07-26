@@ -1,24 +1,27 @@
-// Dynamic sitemap from the seeded stations.
+// Static sitemap generated from the static stations reference data (no backend).
 import type { MetadataRoute } from "next";
-import { db } from "@/lib/db";
+import { STATIONS } from "@/lib/stations-data";
 
-export const dynamic = "force-dynamic";
+const BASE = process.env.NEXT_PUBLIC_SITE_URL || "https://metromitra.vercel.app";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const stations = await db.station.findMany({ select: { code: true, createdAt: true } });
-  const base = process.env.NEXTAUTH_URL || "https://metromitra.vercel.app";
+export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date();
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${base}/`, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    { url: `${base}/stations`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
-    { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
-    { url: `${base}/login`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
-    { url: `${base}/register`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
+    { url: `${BASE}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    { url: `${BASE}/stations`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${BASE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/login`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE}/register`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${BASE}/carpools`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${BASE}/ideas`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${BASE}/lost-found`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${BASE}/marketplace`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
   ];
-  const stationRoutes: MetadataRoute.Sitemap = stations.map((s) => ({
-    url: `${base}/stations/${s.code}`,
-    lastModified: s.createdAt,
+  const stationRoutes: MetadataRoute.Sitemap = STATIONS.map((s) => ({
+    url: `${BASE}/stations/${s.code}`,
+    lastModified: now,
     changeFrequency: "weekly",
-    priority: 0.7,
+    priority: 0.6,
   }));
   return [...staticRoutes, ...stationRoutes];
 }

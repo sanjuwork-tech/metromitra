@@ -1,10 +1,8 @@
 "use client";
-// Reusable station select dropdown. Loads stations once, caches in TanStack Query.
-import { useQuery } from "@tanstack/react-query";
+// Reusable station select dropdown. Stations are static reference data —
+// no fetch needed (NO backend, NO API).
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { apiFetch } from "@/lib/api-fetch";
-
-type StationOption = { id: string; code: string; name: string; city: string };
+import { STATIONS } from "@/lib/stations-data";
 
 export function StationSelect({
   value,
@@ -17,18 +15,13 @@ export function StationSelect({
   placeholder?: string;
   autoFocus?: boolean;
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["stations", "all"],
-    queryFn: () => apiFetch<StationOption[]>("/api/stations"),
-  });
-
   return (
-    <Select value={value ?? ""} onValueChange={onChange} disabled={isLoading}>
+    <Select value={value ?? ""} onValueChange={onChange}>
       <SelectTrigger autoFocus={autoFocus}>
-        <SelectValue placeholder={isLoading ? "Loading stations…" : placeholder} />
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="max-h-72">
-        {(data ?? []).map((s) => (
+        {STATIONS.map((s) => (
           <SelectItem key={s.id} value={s.id}>
             <span className="text-xs text-muted-foreground">{s.code}</span>
             <span className="ml-2">{s.name}</span>

@@ -2,7 +2,7 @@
 // Authenticated application shell: header + page content + footer.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/lib/auth-client";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
   LayoutDashboard,
   Route,
   Users,
-  ShieldCheck,
+  Lightbulb,
   PackageSearch,
   HandHeart,
   MessageSquare,
@@ -23,7 +23,7 @@ const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/stations", label: "Stations", icon: Route },
   { href: "/carpools", label: "Carpools", icon: Users },
-  { href: "/buddies", label: "Travel buddy", icon: ShieldCheck },
+  { href: "/ideas", label: "Idea Junction", icon: Lightbulb },
   { href: "/lost-found", label: "Lost & Found", icon: PackageSearch },
   { href: "/marketplace", label: "Marketplace", icon: HandHeart },
   { href: "/feed", label: "Community", icon: MessageSquare },
@@ -37,7 +37,7 @@ export function AppShell({ children, title, description, action }: {
   action?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user } = useAuth();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -75,7 +75,7 @@ export function AppShell({ children, title, description, action }: {
               <div>
                 {title && <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>}
                 {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
-                {session?.user?.homeStationId === null && (
+                {!user?.homeStationId && (
                   <Badge variant="secondary" className="mt-2">
                     Tip: set your home & work stations in your profile
                   </Badge>

@@ -2,7 +2,7 @@
 
 > Find your people on the line you already ride.
 
-MetroMitra is a hyperlocal community web application built around **Indian metro rail stations**. It turns a daily, solitary commute into a connected experience — share a last-mile auto, find a trusted travel buddy for a late shift, recover a dropped wallet, and trade within your station's community, all anchored to the station you pass through every day.
+MetroMitra is a hyperlocal community web application built around **Indian metro rail stations**. It turns a daily, solitary commute into a connected experience — share a last-mile auto, post an entrepreneurial idea and find a co-founder among the people riding your line, recover a dropped wallet, and trade within your station's community, all anchored to the station you pass through every day.
 
 This repository contains the complete application: product documentation (PRD), technical documentation (TechRD), a LaTeX architecture document with TikZ diagrams, an automated CI/CD pipeline, and the deployable Next.js application itself.
 
@@ -14,26 +14,39 @@ This repository contains the complete application: product documentation (PRD), 
 metromitra/
 ├── docs/
 │   ├── PRD.md                              # Product requirements, market research, features
-│   ├── TechRD.md                           # Technical architecture, stack, data model, API
+│   ├── TechRD.md                           # Technical architecture, stack, data model
 │   ├── architecture/
 │   │   └── MetroMitra-Architecture.tex     # LaTeX document with TikZ diagrams (→ PDF)
 │   └── reference/                          # The playbooks that guided this build
-├── prisma/
-│   ├── schema.prisma                       # Data model (12 entities)
-│   └── seed.js                             # Seeds 39 stations + 3 demo users
 ├── src/
-│   ├── app/                                # Next.js App Router (routes + API handlers)
-│   │   ├── api/                            # REST-style Route Handlers
-│   │   ├── (public pages)                  # landing, stations, about
-│   │   ├── login, register                 # auth
-│   │   └── dashboard, carpools, buddies,   # authenticated app
+│   ├── app/                                # Next.js App Router (pages only — no API routes)
+│   │   ├── (public pages)                  # landing, stations, about — server-rendered from static data
+│   │   ├── login, register                 # client-side auth
+│   │   └── dashboard, carpools, ideas,     # authenticated app — client components
 │   │       lost-found, marketplace, feed, profile
 │   ├── components/                         # UI (shadcn/ui + feature components)
-│   └── lib/                                # auth, db, validators, trust, helpers
+│   └── lib/
+│       ├── store.ts                        # Zustand store + manual localStorage sync
+│       ├── auth-client.tsx                 # client-side demo auth context
+│       └── stations-data.ts                # 80 static metro stations across 6 cities
 ├── .github/workflows/ci.yml                # CI/CD: lint → typecheck → build → deploy
 ├── vercel.json                             # Vercel deployment config
 └── package.json                            # npm-managed dependencies
 ```
+
+---
+
+## Architecture (no backend, no database, no API)
+
+MetroMitra runs **entirely in the browser**. There is no server, no database, and no API layer:
+
+- All data (accounts, posts, rides, ideas, listings, contact requests) lives in a **Zustand store** that is **manually synced to `localStorage`**.
+- **Stations are static reference data** — 80 real metro stations across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, and Kolkata, compiled into `src/lib/stations-data.ts`.
+- **Authentication is client-side** — register, login, and logout write to the store. Passwords are hashed with a lightweight demo hash (not production-secure; see TechRD §10).
+- Public pages (landing, station directory, about) are **server-rendered** from the static station data for SEO. Authenticated app pages are **client components** that read the store.
+- Deployed to **Vercel** as a standard Next.js build. No database to provision, no environment secrets required.
+
+This makes the app **zero-setup**: `npm install && npm run dev` and it works. Data persists per-browser via localStorage but does not sync across devices. See the TechRD for the honest limitations and the migration path to a real backend if the product were to scale.
 
 ---
 
@@ -45,13 +58,7 @@ metromitra/
 | Language | TypeScript 5 (strict) |
 | Styling | Tailwind CSS 4 |
 | UI primitives | shadcn/ui (New York) + lucide-react |
-| Database ORM | Prisma 6 |
-| Database (dev) | SQLite |
-| Database (prod) | portable to Turso (libSQL) or Postgres — one-line change |
-| Auth | NextAuth.js v4 (Credentials provider, JWT sessions) |
-| Password hashing | Node built-in `scrypt` (no bcrypt native dep) |
-| Server state | TanStack Query |
-| Client state | Zustand |
+| State management | Zustand (manual localStorage sync) |
 | Motion | Framer Motion (Level 1 — refined interface motion only) |
 | Package manager | **npm** (not bun — for Vercel deployment reliability) |
 | Deployment | Vercel |
@@ -71,25 +78,13 @@ metromitra/
 # 1. Install dependencies
 npm install
 
-# 2. Copy the environment template and fill in values
-cp .env.example .env
-#   Then edit .env:
-#     DATABASE_URL=file:/absolute/path/to/db/custom.db
-#     NEXTAUTH_SECRET=<run: openssl rand -base64 32>
-#     NEXTAUTH_URL=http://localhost:3000
-
-# 3. Generate the Prisma client and create the database
-npx prisma generate
-npm run db:push
-
-# 4. Seed the database with 39 Indian metro stations + 3 demo users
-npm run db:seed
-
-# 5. Start the dev server
+# 2. Start the dev server
 npm run dev
 ```
 
-Open <http://localhost:3000> in your browser.
+Open <http://localhost:3000> in your browser. That's it — no database setup, no environment variables, no secrets.
+
+On first visit, the app seeds itself with demo content (3 demo users, sample posts, rides, ideas, listings) so you can explore immediately. Use the **Profile → Demo data** tab to reset or clear the local data at any time.
 
 ### Demo accounts
 
@@ -98,8 +93,10 @@ Three demo accounts are seeded for testing. The password for all of them is `pas
 | Email | Persona |
 |---|---|
 | `devika@metromitra.in` | Bengaluru Purple Line commuter |
-| `rohan@metromitra.in` | Delhi Yellow Line, newly relocated |
+| `rohan@metromitra.in` | Delhi Yellow Line, aspiring founder |
 | `anitha@metromitra.in` | Mumbai Andheri, monthly traveller |
+
+You can also register a new account — it will be stored in your browser's localStorage alongside the demo data.
 
 ---
 
@@ -112,100 +109,15 @@ Three demo accounts are seeded for testing. The password for all of them is `pas
 | `npm run start` | Start the production server (after build) |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run `tsc --noEmit` (strict type check) |
-| `npm run db:push` | Push the Prisma schema to the database |
-| `npm run db:generate` | Regenerate the Prisma client |
-| `npm run db:seed` | Seed stations + demo users |
-
----
-
-## Production deployment (Vercel)
-
-MetroMitra is configured for one-command deployment to Vercel via GitHub Actions.
-
-### One-time setup
-
-1. **Fork or push** this repository to GitHub.
-2. **Create a Vercel project** at <https://vercel.com/new> linked to the repository.
-3. **Set environment variables** in the Vercel dashboard (Project → Settings → Environment Variables):
-   - `DATABASE_URL` — a production database URL (see "Database in production" below)
-   - `NEXTAUTH_SECRET` — `openssl rand -base64 32`
-   - `NEXTAUTH_URL` — your production URL (e.g. `https://metromitra.vercel.app`)
-4. **Copy Vercel IDs** from Project → Settings → General:
-   - `VERCEL_ORG_ID` (your team/user ID)
-   - `VERCEL_PROJECT_ID` (the project ID)
-5. **Create a Vercel token** at <https://vercel.com/account/tokens>.
-6. **Add GitHub secrets** (repository → Settings → Secrets and variables → Actions):
-   - `VERCEL_TOKEN`
-   - `VERCEL_ORG_ID`
-   - `VERCEL_PROJECT_ID`
-   - `DATABASE_URL` (used by the CI job)
-   - `NEXTAUTH_SECRET`
-   - `NEXTAUTH_URL`
-
-### What the pipeline does
-
-Every push or pull request to `main` triggers `.github/workflows/ci.yml`:
-
-1. `npm ci` — reproducible install
-2. `npx prisma generate` + `prisma db push` + `node prisma/seed.js` — set up a CI database
-3. `npm run lint` — ESLint
-4. `npm run typecheck` — `tsc --noEmit`
-5. `npm run build` — production build
-6. **On push to `main` only:** `vercel build --prod` → `vercel deploy --prebuilt --prod` — deploy to production
-
-The deploy step runs only after all quality gates pass, and only on the `main` branch.
-
-### Manual deploy (alternative)
-
-If you prefer to deploy without the pipeline:
-
-```bash
-npm install -g vercel
-vercel        # preview deploy
-vercel --prod # production deploy
-```
-
----
-
-## Database in production
-
-The dev database is SQLite (`db/custom.db`), which works locally but **does not persist across cold starts on Vercel** (Vercel's filesystem is read-only except for `/tmp`).
-
-For a persistent production database, switch the Prisma `datasource` provider. No application code changes are required — only `prisma/schema.prisma` and `DATABASE_URL`:
-
-### Option A: Turso (libSQL) — recommended, SQLite-compatible
-
-1. Create a database at <https://turso.tech>.
-2. In `prisma/schema.prisma`:
-   ```prisma
-   datasource db {
-     provider = "libsql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-3. Set `DATABASE_URL=libsql://<host>?authToken=<token>` in Vercel.
-4. Run `npx prisma db push` against the production URL.
-
-### Option B: Postgres (Vercel Postgres, Neon, Supabase)
-
-1. In `prisma/schema.prisma`:
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-2. Set `DATABASE_URL=postgresql://...` in Vercel.
-3. Run `npx prisma migrate deploy`.
 
 ---
 
 ## Features
 
-- **Station directory** — 39 real metro stations across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata.
+- **Station directory** — 80 real metro stations across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata, each with its own community page.
 - **Community feed** — station-scoped posts with tags (`help`, `info`, `alert`, `meetup`, `general`) and threaded replies.
 - **Last-mile carpool** — offer or request rides from a station; trust-scored, with women-only filtering.
-- **Travel buddy** — find a companion for a metro leg, distinct from carpool (no vehicle implied).
+- **Idea Junction** — the standout feature. A station-anchored board for entrepreneurial ideas, side-project thoughts, and co-founder search among the people riding your line.
 - **Lost & Found** — report lost or found items; contact flows keep your number private until you accept.
 - **Station marketplace** — buy and sell within the commuter community (no payments processed in-app).
 - **Trust scores** — a transparent, explainable score from profile completeness, ratings, and completed interactions.
@@ -218,7 +130,7 @@ For a persistent production database, switch the Prisma `datasource` provider. N
 | Document | Path | Purpose |
 |---|---|---|
 | Product Requirements | `docs/PRD.md` | What MetroMitra is, who it's for, what it does |
-| Technical Requirements | `docs/TechRD.md` | Architecture, stack, data model, API design |
+| Technical Requirements | `docs/TechRD.md` | Architecture, stack, data model, client-side data layer |
 | LaTeX architecture document | `docs/architecture/MetroMitra-Architecture.tex` | Engineering document with TikZ diagrams (compile to PDF with `pdflatex`, `xelatex`, or `tectonic`) |
 | Reference playbooks | `docs/reference/` | The Master Playbook, Ponytail skill, and anti-pattern notes that guided the build |
 
@@ -234,36 +146,77 @@ tectonic MetroMitra-Architecture.tex
 
 ---
 
+## Production deployment (Vercel)
+
+MetroMitra is configured for deployment to Vercel via GitHub Actions CI/CD.
+
+### One-time setup
+
+1. **Fork or push** this repository to GitHub.
+2. **Create a Vercel project** at <https://vercel.com/new> linked to the repository.
+3. **Copy the Vercel IDs** from Project → Settings → General:
+   - `VERCEL_ORG_ID` (your team/user ID)
+   - `VERCEL_PROJECT_ID` (the project ID)
+4. **Create a Vercel token** at <https://vercel.com/account/tokens>.
+5. **Add GitHub secrets** (repository → Settings → Secrets and variables → Actions):
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
+
+No `DATABASE_URL`, no `NEXTAUTH_SECRET`, no environment variables are needed — the app is client-side only.
+
+### What the pipeline does
+
+Every push or pull request to `main` triggers `.github/workflows/ci.yml`:
+
+1. `npm ci` — reproducible install
+2. `npm run lint` — ESLint
+3. `npm run typecheck` — `tsc --noEmit`
+4. `npm run build` — production build
+5. **On push to `main` only:** `vercel build --prod` → `vercel deploy --prebuilt --prod` — deploy to production
+
+The deploy step runs only after all quality gates pass, and only on the `main` branch.
+
+### Manual deploy (alternative)
+
+```bash
+npm install -g vercel
+vercel        # preview deploy
+vercel --prod # production deploy
+```
+
+---
+
 ## Project conventions
 
 - **TypeScript strict** — `tsc --noEmit` must pass before merge.
-- **Zod at the boundary** — every API write is validated with a Zod schema from `src/lib/validators.ts`; the same schemas are used by client forms.
 - **shadcn/ui only** — no custom re-implementations of button/card/dialog/input.
-- **No `any` in application logic** — `unknown` + Zod parse at trust boundaries.
+- **No `any` in application logic** — `unknown` + validation at trust boundaries.
+- **Zustand selectors must return stable references** — never return a fresh object/array from a `useStore((s) => ...)` selector; select the raw state field and derive with `useMemo` instead (see `useUsersById`, `useCurrentUser` in `src/lib/store.ts`).
 - **Accessibility** — semantic landmarks, keyboard-operable controls, visible focus, AA contrast, `prefers-reduced-motion` respected.
 - **Responsive** — verified at 390px (mobile), 768px (tablet), 1440px (desktop).
 - **No fabricated proof** — no fake testimonials, partner logos, or metrics. Demo data is clearly labelled.
 
 ---
 
-## Security notes
+## Security notes (honest)
 
-- Passwords are hashed with `scrypt` (Node built-in, no native dependency).
-- Sessions are JWT-based, stored in `httpOnly` secure cookies.
+- This is a **client-side demo**. localStorage is not secure and demo auth is not production-grade.
+- Passwords are hashed with a lightweight demo hash (djb2-style), not bcrypt/argon2.
 - Contact information is never exposed until both parties accept a contact request.
-- `.env`, `db/*.db`, `node_modules`, `.next`, `bun.lock` are gitignored.
-- No third-party analytics or tracking.
+- No real payments are processed.
+- A production version would need: a real backend, server-side hashed passwords, a managed database, rate limiting, HTTPS-only cookies, and server-side validation. See TechRD §10 for the migration path.
 
 ---
 
 ## Limitations (honest)
 
-- **SQLite on Vercel is ephemeral.** Data resets on cold starts. Use Turso or Postgres for persistence (see above).
-- **No real payments.** Marketplace and carpool cost-splitting express intent only; money changes hands directly between users (cash/UPI).
-- **No real-time updates.** Lists use TanStack Query polling (30–60s). A WebSocket layer is a documented roadmap item.
-- **No automated content moderation.** Reports go to a manual queue.
-- **English only in v1.** The schema and UI are structured for Hindi/regional language addition without model changes.
-- **MetroMitra is an independent project**, not affiliated with DMRC, MMRCL, BMRCL, HMRL, CMRL, or any metro corporation.
+- **Data is per-browser.** localStorage does not sync across devices and is cleared if you reset browser data. Use the Profile → Demo data tab to reset.
+- **No real-time updates.** The UI updates instantly within your browser (Zustand is synchronous), but there's no cross-user real-time layer.
+- **No real payments.** Marketplace and carpool cost-splitting express intent only.
+- **No automated content moderation.** Reports go to a local queue visible in the store.
+- **English only.** The UI strings are structured for future localisation but v1 ships in English.
+- **MetroMitra is an independent project**, not affiliated with DMRC, MMRCL, BMRCL, HMRL, CMRL, or any metro corporation. Station names and line colours are referenced only to orient members.
 
 ---
 

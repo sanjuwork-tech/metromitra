@@ -1,10 +1,8 @@
 "use client";
-// Typed useSession wrapper exposing our enriched session fields.
-import { useSession as useNextAuthSession } from "next-auth/react";
-import type { AppSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth-client";
 
+// Drop-in replacement for the old NextAuth useSession hook shape.
 export function useSession() {
-  return useNextAuthSession() as ReturnType<typeof useNextAuthSession> & {
-    data: AppSession | null;
-  };
+  const { user, status } = useAuth();
+  return { data: user ? { user } : null, status };
 }

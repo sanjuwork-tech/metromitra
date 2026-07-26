@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 
+const BASE = process.env.NEXT_PUBLIC_SITE_URL || "https://metromitra.vercel.app";
+
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXTAUTH_URL || "https://metromitra.vercel.app";
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/dashboard", "/profile"] },
-    sitemap: `${base}/sitemap.xml`,
+    rules: { userAgent: "*", allow: "/", disallow: ["/dashboard", "/profile", "/feed"] },
+    sitemap: `${BASE}/sitemap.xml`,
   };
 }

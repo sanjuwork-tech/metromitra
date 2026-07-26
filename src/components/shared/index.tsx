@@ -14,6 +14,8 @@ const lineColorVar: Record<string, string> = {
   magenta: "var(--color-line-magenta)",
   purple: "var(--color-line-purple)",
   aqua: "var(--color-line-aqua)",
+  pink: "var(--color-line-pink)",
+  grey: "var(--color-line-grey)",
 };
 
 export function LineDots({ colors, className }: { colors: string; className?: string }) {

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s · MetroMitra",
   },
   description:
-    "MetroMitra is a hyperlocal community for Indian metro commuters. Share last-mile rides, find trusted travel buddies, recover lost items, and trade within your station's community.",
+    "MetroMitra is a hyperlocal community for Indian metro commuters. Share last-mile rides, post entrepreneurial ideas, recover lost items, and trade within your station's community.",
   keywords: [
     "Indian metro",
     "Delhi Metro",

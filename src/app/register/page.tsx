@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -11,10 +10,11 @@ import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { Train } from "lucide-react";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api-fetch";
+import { useAuth } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register, login } = useAuth();
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -24,22 +24,16 @@ export default function RegisterPage() {
     const email = String(form.get("email") || "");
     const password = String(form.get("password") || "");
     const city = String(form.get("city") || "");
+    if (password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
     setLoading(true);
-    try {
-      await apiFetch("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ name, email, password, city: city || undefined }),
-      });
-      const res = await signIn("credentials", { email, password, redirect: false });
-      if (res?.error) throw new Error("Account created, but sign-in failed. Please sign in manually.");
-      toast.success("Welcome to MetroMitra. Let's set up your stations.");
-      router.push("/dashboard?welcome=1");
-      router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "Could not create account");
-    } finally {
-      setLoading(false);
-    }
+    const res = register(name, email, password, city || undefined);
+    if (!res.ok) { setLoading(false); toast.error(res.error || "Could not create account"); return; }
+    // auto-login
+    login(email, password);
+    setLoading(false);
+    toast.success("Welcome to MetroMitra. Let's set up your stations.");
+    router.push("/dashboard?welcome=1");
+    router.refresh();
   }
 
   return (
@@ -76,7 +70,7 @@ export default function RegisterPage() {
                 {loading ? "Creating account…" : "Create account"}
               </Button>
               <p className="text-xs text-muted-foreground">
-                By signing up you agree to meet in public station areas and use the platform responsibly.
+                This is a local demo: your account is stored in your browser only. No data leaves your device.
               </p>
             </form>
           </CardContent>

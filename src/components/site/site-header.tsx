@@ -1,18 +1,17 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Menu, Train, LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 const navLinks = [
   { href: "/stations", label: "Stations" },
   { href: "/carpools", label: "Carpools" },
-  { href: "/buddies", label: "Travel buddy" },
+  { href: "/ideas", label: "Idea Junction" },
   { href: "/lost-found", label: "Lost & Found" },
   { href: "/marketplace", label: "Marketplace" },
 ];
@@ -32,7 +31,7 @@ function Logo() {
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { user, status, logout } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
@@ -58,17 +57,12 @@ export function SiteHeader() {
         <div className="hidden items-center gap-2 md:flex">
           {status === "loading" ? (
             <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />
-          ) : session ? (
+          ) : user ? (
             <>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => signOut({ callbackUrl: "/" })}
-                aria-label="Sign out"
-              >
+              <Button variant="outline" size="sm" onClick={logout} aria-label="Sign out">
                 <LogOut className="h-4 w-4" />
                 <span className="sr-only md:not-sr-only md:ml-1.5 md:inline">Sign out</span>
               </Button>
@@ -85,7 +79,6 @@ export function SiteHeader() {
           )}
         </div>
 
-        {/* Mobile nav */}
         <div className="md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -107,13 +100,11 @@ export function SiteHeader() {
                   </Link>
                 ))}
                 <div className="my-2 h-px bg-border" />
-                {session ? (
+                {user ? (
                   <>
-                    <Link href="/dashboard" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm hover:bg-accent">
-                      Dashboard
-                    </Link>
+                    <Link href="/dashboard" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm hover:bg-accent">Dashboard</Link>
                     <button
-                      onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
+                      onClick={() => { setOpen(false); logout(); }}
                       className="rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent"
                     >
                       Sign out

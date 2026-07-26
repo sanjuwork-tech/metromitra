@@ -3,16 +3,16 @@ import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { Button } from "@/components/ui/button";
 import { Train, FileText, Github, Code2 } from "lucide-react";
-import { db } from "@/lib/db";
+import { STATIONS } from "@/lib/stations-data";
 
 export const metadata = {
   title: "About MetroMitra",
   description: "What MetroMitra is, who it's for, and how it was built.",
 };
 
-export default async function AboutPage() {
-  const stationCount = await db.station.count();
-  const cityCount = await db.station.findMany({ distinct: ["city"], select: { city: true } });
+export default function AboutPage() {
+  const stationCount = STATIONS.length;
+  const cityCount = Array.from(new Set(STATIONS.map((s) => s.city))).length;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -24,7 +24,7 @@ export default async function AboutPage() {
         <h1 className="text-3xl font-semibold tracking-tight">About MetroMitra</h1>
         <p className="mt-3 text-lg text-muted-foreground">
           A hyperlocal community platform built around Indian metro stations.
-          {stationCount} stations seeded across {cityCount.length} cities — and growing.
+          {stationCount} stations seeded across {cityCount} cities — and growing.
         </p>
 
         <div className="prose-sm mt-8 space-y-6 text-foreground">
@@ -44,7 +44,7 @@ export default async function AboutPage() {
             <ul className="mt-2 space-y-1.5 text-muted-foreground">
               <li>Station-scoped community feed — ask, inform, alert, organise.</li>
               <li>Last-mile carpool — offer or request a ride from a station, with trust signals.</li>
-              <li>Travel buddy — find a companion for a metro leg, with women-only filtering.</li>
+              <li>Idea Junction — post entrepreneurial ideas and find co-founders among your station community.</li>
               <li>Lost &amp; Found — report items to the station community instantly.</li>
               <li>Station marketplace — buy and sell within a trusted commuter pool.</li>
             </ul>
@@ -54,9 +54,10 @@ export default async function AboutPage() {
             <h2 className="text-xl font-semibold">How it was built</h2>
             <p className="mt-2 text-muted-foreground">
               MetroMitra is a Next.js 16 application with TypeScript, Tailwind CSS 4, shadcn/ui,
-              Prisma, and NextAuth. It is deployed to Vercel through an automated GitHub Actions
-              CI/CD pipeline. The full product and technical rationale is documented in the
-              repository&rsquo;s <code className="rounded bg-muted px-1.5 py-0.5 text-xs">docs/</code> folder.
+              and Zustand for local browser storage. It runs with no backend, no database and no
+              API — all data lives in your browser — and is deployed to Vercel through an
+              automated GitHub Actions CI/CD pipeline. The full product and technical rationale is
+              documented in the repository&rsquo;s <code className="rounded bg-muted px-1.5 py-0.5 text-xs">docs/</code> folder.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm">
@@ -76,8 +77,10 @@ export default async function AboutPage() {
             <ul className="mt-2 space-y-1.5 text-muted-foreground">
               <li>
                 <Code2 className="mr-1 inline h-4 w-4 text-muted-foreground" aria-hidden />
-                This demo uses SQLite. On Vercel, data may not persist across cold starts.
-                The schema is portable to Turso or Postgres with a single line change (documented in TechRD).
+                This demo runs entirely in your browser (localStorage). There is no backend or
+                database, so data does not sync across devices and is cleared if you reset browser
+                data. The architecture document describes the migration path to a real backend if
+                the product were to scale.
               </li>
               <li>No real payments are processed. Marketplace and carpool cost-splitting are intent-only.</li>
               <li>MetroMitra is an independent project and is not affiliated with any metro corporation.</li>

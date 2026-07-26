@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { STATIONS, CITIES } from "@/lib/stations-data";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { MetroMapHero } from "@/components/site/metro-map-hero";
@@ -8,27 +8,26 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users,
   Route,
-  ShieldCheck,
+  Lightbulb,
   PackageSearch,
   Search,
   HandHeart,
   ArrowRight,
   Train,
-  Quote,
 } from "lucide-react";
 
-// Server component — fetches a small station sample for the directory preview.
-async function getStationPreview() {
-  const stations = await db.station.findMany({
-    orderBy: [{ city: "asc" }, { name: "asc" }],
-    take: 6,
-    select: { id: true, code: true, name: true, city: true, lines: true, lineColors: true },
-  });
-  const cities = await db.station.findMany({
-    distinct: ["city"],
-    select: { city: true },
-  });
-  return { stations, cityCount: cities.length };
+// Public landing page. Stations are static reference data (no backend).
+function getStationPreview() {
+  // Pick a diverse sample across all cities for the landing preview.
+  const byCity: Record<string, typeof STATIONS> = {};
+  for (const s of STATIONS) (byCity[s.city] ||= []).push(s);
+  const stations: typeof STATIONS = [];
+  for (const city of CITIES) {
+    const list = byCity[city];
+    if (list?.length) stations.push(list[0]);
+  }
+  const cityCount = CITIES.length;
+  return { stations: stations.slice(0, 6), cityCount };
 }
 
 const lineColorVar: Record<string, string> = {
@@ -41,6 +40,8 @@ const lineColorVar: Record<string, string> = {
   magenta: "var(--color-line-magenta)",
   purple: "var(--color-line-purple)",
   aqua: "var(--color-line-aqua)",
+  pink: "var(--color-line-pink)",
+  grey: "var(--color-line-grey)",
 };
 
 function LineDots({ colors }: { colors: string }) {
@@ -59,8 +60,8 @@ function LineDots({ colors }: { colors: string }) {
   );
 }
 
-export default async function Home() {
-  const { stations, cityCount } = await getStationPreview();
+export default function Home() {
+  const { stations, cityCount } = getStationPreview();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -80,7 +81,7 @@ export default async function Home() {
               </h1>
               <p className="mt-5 max-w-xl text-pretty text-lg text-muted-foreground">
                 MetroMitra turns the daily metro commute into a connected experience.
-                Share a last-mile auto, find a trusted travel buddy for the late shift,
+                Share a last-mile auto, spark an entrepreneurial idea with a co-commuter,
                 recover a dropped wallet, and trade within your station&rsquo;s community —
                 all anchored to the station you pass through every day.
               </p>
@@ -175,7 +176,7 @@ export default async function Home() {
                   </div>
                   <h3 className="mt-3 text-xl font-semibold">Station-first community, not city-first</h3>
                   <p className="mt-2 text-muted-foreground">
-                    Every post, ride, listing and buddy request is anchored to a real station
+                    Every post, ride, listing and idea is anchored to a real station
                     code. Filter by your station and see only what matters to the people who
                     pass through the same gates you do — Rajiv Chowk, Andheri, Cubbon Park,
                     Ameerpet, Chennai Central, Esplanade.
@@ -213,16 +214,17 @@ export default async function Home() {
                 </p>
               </article>
 
-              {/* capability 3 */}
+              {/* capability 3 — Idea Junction (the standout unique feature) */}
               <article>
                 <div className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <ShieldCheck className="h-5 w-5" aria-hidden />
+                  <Lightbulb className="h-5 w-5" aria-hidden />
                 </div>
-                <h3 className="mt-3 text-xl font-semibold">Travel buddy for the moments that matter</h3>
+                <h3 className="mt-3 text-xl font-semibold">Idea Junction — where commute meets co-founding</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Looking for company on an early-morning or late-evening leg? Post a buddy
-                  request with your origin, destination and time. Match with someone going
-                  the same way — no vehicle, no payment, just presence.
+                  The metro carries a disproportionate share of young professionals, students and
+                  aspiring founders. Idea Junction turns that into serendipity: post an entrepreneurial
+                  idea, a side-project thought, or a validation question, anchored to your station.
+                  Find a co-founder, a sounding board, or a first user among the people riding your line.
                 </p>
               </article>
 
@@ -284,7 +286,7 @@ export default async function Home() {
                       ["Anchored to a specific station", "No", "Yes"],
                       ["Commuter trust score", "No", "Yes"],
                       ["Women-only matching", "No", "Yes"],
-                      ["Last-mile ride + buddy + lost-and-found + market in one", "No", "Yes"],
+                      ["Last-mile ride + ideas + lost-and-found + market in one", "No", "Yes"],
                       ["India-native (UPI-aware, metro line semantics)", "Partial", "Yes"],
                     ].map((row) => (
                       <tr key={row[0]}>
@@ -372,27 +374,6 @@ export default async function Home() {
                 </div>
               ))}
             </dl>
-          </div>
-        </section>
-
-        {/* ─── A NOTE ON METHOD (proof of process, not fake testimonials) ─ */}
-        <section className="border-b border-border/60" aria-labelledby="method-title">
-          <div className="mx-auto max-w-3xl px-4 py-16 md:py-20">
-            <Quote className="h-8 w-8 text-primary/30" aria-hidden />
-            <h2 id="method-title" className="mt-4 text-balance text-2xl font-semibold tracking-tight">
-              Built like a real product, not a demo.
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              MetroMitra ships with a typed data model, server-rendered public pages for SEO,
-              session-based authentication, validated API routes, an automated CI/CD pipeline,
-              and a documented path from local SQLite to a managed database on Vercel. The
-              architecture, data model, and deployment topology are written up in a separate
-              engineering document with diagrams — the same way a real team would deliver it.
-            </p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              See the <code className="rounded bg-muted px-1.5 py-0.5 text-xs">docs/</code> folder
-              for the PRD, TechRD, and LaTeX architecture document.
-            </p>
           </div>
         </section>
 

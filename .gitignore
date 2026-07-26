@@ -73,3 +73,16 @@ bun.lockb
 
 # Tests scratch (non-application)
 /tests/
+
+# Examples / mini-services / sandbox scratch (not part of the app)
+/examples/
+/mini-services/
+
+# Caddy gateway config (sandbox-only, not for the repo)
+Caddyfile
+
+# Z.ai scripts scratch
+/.zscripts/
+
+# Worklog (coordination scratch, not application source)
+worklog.md
