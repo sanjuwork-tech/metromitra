@@ -1,0 +1,678 @@
+% MetroMitra --- Architecture Document
+% LaTeX source. Compile with pdflatex or xelatex (TeX Live).
+% Companion to docs/PRD.md and docs/TechRD.md.
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, backgrounds}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{titlesec}
+
+% --- Brand palette ----------------------------------------------------------
+\definecolor{terracotta}{HTML}{C2410C}
+\definecolor{terracottasoft}{HTML}{F97316}
+\definecolor{terracottatint}{HTML}{FED7AA}
+\definecolor{canvas}{HTML}{FAF7F2}
+\definecolor{ink}{HTML}{1F1B16}
+\definecolor{slate}{HTML}{475569}
+
+% --- Hyperref (load late, before bookmark) ---------------------------------
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=terracotta,
+  urlcolor=terracotta,
+  citecolor=terracotta,
+  pdftitle={MetroMitra Architecture},
+  pdfauthor={MetroMitra Engineering},
+  pdfsubject={Architecture document for MetroMitra v1.0},
+  pdfkeywords={MetroMitra, architecture, Next.js, Prisma, NextAuth, TikZ}
+}
+\usepackage{bookmark}
+
+% --- Section formatting -----------------------------------------------------
+\titleformat{\section}{\color{terracotta}\Large\bfseries\sffamily}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\color{terracotta}\large\bfseries\sffamily}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\color{ink}\normalsize\bfseries\sffamily}{\thesubsubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+
+% --- Caption formatting -----------------------------------------------------
+\captionsetup{font=small, labelfont={bf,color=terracotta}, format=plain, justification=raggedright, singlelinecheck=false, skip=4pt}
+
+% --- Listings (TypeScript) --------------------------------------------------
+\lstdefinelanguage{TypeScript}{
+  morekeywords={const, let, var, function, return, async, await, import, from, export, default, type, interface, extends, implements, new, class, public, private, if, else, for, while, try, catch, throw, true, false, null, undefined, as, in, of, switch, case, break, continue, string, number, boolean, Promise, Array, Record, unknown, void, never, Partial, Pick, Omit},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  morestring=[b]`,
+}
+
+\lstset{
+  language=TypeScript,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{terracotta}\bfseries,
+  commentstyle=\color{slate!75}\itshape,
+  stringstyle=\color{teal!70!black},
+  identifierstyle=\color{ink},
+  backgroundcolor=\color{canvas},
+  frame=leftline,
+  rulecolor=\color{terracotta},
+  framerule=1.2pt,
+  framesep=8pt,
+  xleftmargin=10pt,
+  xrightmargin=2pt,
+  showstringspaces=false,
+  breaklines=true,
+  columns=flexible,
+  keepspaces=true,
+  tabsize=2,
+  aboveskip=10pt,
+  belowskip=10pt,
+}
+
+% --- Paragraph spacing ------------------------------------------------------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\emergencystretch=3em  % allow more flexible line breaking to avoid overfull hboxes
+
+% --- Title page -------------------------------------------------------------
+\begin{document}
+\hypersetup{pageanchor=false}
+
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\color{terracotta}\sffamily\Huge\bfseries MetroMitra\par}
+\vspace{0.4cm}
+{\color{ink}\sffamily\Large Architecture Document\par}
+\vspace{0.8cm}
+{\color{terracotta}\rule{0.5\textwidth}{1.2pt}\par}
+\vspace{0.9cm}
+{\sffamily\large v1.0 Baseline --- Build Cycle 1\par}
+\vspace{0.4cm}
+{\sffamily\normalsize MetroMitra Engineering\par}
+\vfill
+% small metro-map motif in TikZ: nodes connected by a line
+\begin{tikzpicture}[font=\scriptsize\sffamily]
+  \draw[line width=1.4pt, draw=terracotta!70] (0,0) -- (7.0,0);
+  \filldraw[fill=terracotta, draw=ink] (0,0)   circle (3pt);
+  \filldraw[fill=terracotta!70, draw=ink] (1.75,0) circle (3pt);
+  \filldraw[fill=terracotta!50, draw=ink] (3.5,0)  circle (3pt);
+  \filldraw[fill=terracotta!70, draw=ink] (5.25,0) circle (3pt);
+  \filldraw[fill=terracotta, draw=ink] (7.0,0) circle (3pt);
+\end{tikzpicture}
+\vspace{1.2cm}
+\par
+{\sffamily\footnotesize Companion to \texttt{docs/PRD.md} and \texttt{docs/TechRD.md}\par}
+{\sffamily\footnotesize Internal architecture review document\par}
+\vspace{1.6cm}
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
+
+\begin{abstract}
+\noindent
+MetroMitra is a hyperlocal community web application anchored to Indian metro stations. This document describes the architecture of the v1.0 build: a server-rendered Next.js application backed by Prisma and SQLite, authenticated with NextAuth credentials and JWT sessions, deployed to Vercel from GitHub via a single GitHub Actions pipeline. The intent is to record, for an internal architecture review, the components we chose, the components we deliberately did not choose, the data model, the trust and safety primitives, and the limits we are aware of. Where a more sophisticated solution exists, we note it as a roadmap item rather than retrofit it. The document is written to be read end-to-end, not skimmed for bullet points.
+\end{abstract}
+
+\bigskip
+
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+
+% ============================================================================
+\section{Introduction}
+
+MetroMitra exists because of a specific, observable pattern of behaviour in Indian cities. Several million people pass through the same metro stations every working day, and yet the commute is a solitary experience. They share the platform, the coach, and the exit staircase with hundreds of strangers and have no shared place to find a last-mile ride, recover a dropped phone, find a trustworthy companion for an early-morning leg, or talk about the station they share. Existing products touch pieces of this. BlaBlaCar handles intercity carpooling, OLX handles classifieds, WhatsApp groups handle ad-hoc coordination, and the metro corporations' own apps handle ticketing and journey planning. None of them treats the metro station as the primary unit of community.
+
+MetroMitra is built to test that thesis. A user signs up, anchors their profile to a home station and a work or college station, and immediately sees a station-scoped feed, active carpools originating from that station, lost-and-found entries, and a local marketplace. Trust is not assumed; it is constructed from a profile-completion baseline, peer ratings after completed interactions, and a report flow that feeds a manual moderation queue. The product is positioned for commuters in Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, and Kolkata, with a seed directory of 39 stations across those six cities and three demo users for review.
+
+The build cycle covered by this document is v1.0. It ships the minimum feature set that proves the product thesis, follows the project's Ponytail principle of simplest correct implementation, and is explicit about what it does not yet do. The remainder of this document describes the system in enough detail that an engineer joining the team could orient themselves in a single read.
+
+% ============================================================================
+\section{System overview}
+
+The application is a single Next.js 16 process running on Vercel's Node.js runtime, talking to a relational database through Prisma. There is no separate backend service, no cache layer, no message queue, no websocket service. Each of those was considered and rejected for v1; the rationale is in Section~3.
+
+Figure~\ref{fig:system} shows the components. Browser traffic reaches the Next.js process over HTTPS on the same origin. The process hosts three categories of work: React Server Components for public, SEO-sensitive surfaces; Route Handlers under \texttt{/api/*} for validated writes and structured reads; and the NextAuth.js v4 integration that handles credentials authentication and JWT session management. All three share a single Prisma client, which talks to a SQLite file in development and to a hosted SQL database in production.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  >=Stealth,
+  every node/.style={align=center},
+  client/.style={draw=terracotta, line width=0.9pt, rounded corners=4pt,
+                 fill=terracotta!8, minimum width=64mm, minimum height=14mm, inner sep=4pt},
+  accent/.style={draw=terracotta, line width=0.8pt, rounded corners=3pt,
+                 fill=terracotta!4, minimum width=30mm, minimum height=14mm, inner sep=3pt},
+  container/.style={draw=terracotta, line width=1.1pt, rounded corners=5pt, fill=terracotta!2},
+  server/.style={draw=slate, line width=0.7pt, rounded corners=3pt,
+                 fill=canvas, minimum width=52mm, minimum height=12mm, inner sep=4pt},
+  db/.style={draw=slate, line width=0.7pt, fill=canvas,
+             cylinder, shape border rotate=90, aspect=0.3,
+             minimum height=14mm, minimum width=20mm, inner sep=2pt},
+  arr/.style={->, line width=0.7pt, draw=slate, >=Stealth},
+  lbl/.style={font=\scriptsize\sffamily, text=slate, fill=white, inner sep=1pt},
+]
+  \node[client] (browser) at (0,0) {\textbf{Browser}\\\scriptsize React 19 \textperiodcentered{} Tailwind 4 \textperiodcentered{} shadcn/ui \textperiodcentered{} TanStack Query};
+
+  \node[accent] (rsc) at (-4.2,-3.6) {\textbf{Server Components}\\\scriptsize SSR \textperiodcentered{} SEO};
+  \node[accent] (api) at (0,-3.6) {\textbf{Route Handlers}\\\scriptsize /api/* \textperiodcentered{} Zod};
+  \node[accent] (auth) at (4.2,-3.6) {\textbf{NextAuth v4}\\\scriptsize Credentials \textperiodcentered{} JWT};
+
+  \node[container, fit=(rsc) (api) (auth), inner sep=5mm] (nextbox) {};
+  \node[anchor=south west, font=\footnotesize\sffamily\bfseries, text=terracotta]
+        at ([yshift=1.5mm]nextbox.north west) {Next.js 16 --- App Router, Node.js runtime};
+
+  \node[server] (prisma) at (0,-7.0) {\textbf{Prisma Client} (singleton)\\\scriptsize typed data access};
+
+  \node[db] (sqlite) at (-3.6,-9.6) {\textbf{SQLite}\\\scriptsize dev};
+  \node[db] (turso) at (3.6,-9.6) {\textbf{Turso /}\\\scriptsize Postgres};
+
+  \draw[arr] (browser.south) -- node[lbl, right]{HTTPS} (nextbox.north);
+  \draw[arr] (nextbox.south) -- (prisma.north);
+  \draw[arr] (prisma.south) -- (sqlite.north);
+  \draw[arr] (prisma.south) -- (turso.north);
+\end{tikzpicture}
+\caption{System components. A browser session enters the Next.js process over HTTPS; server components, route handlers, and NextAuth share a single Prisma client, which talks to SQLite locally and to a hosted SQL database in production.}
+\label{fig:system}
+\end{figure}
+
+The choice to keep everything inside Next.js is deliberate. The Ponytail ladder asks, for every candidate piece of infrastructure, whether it needs to exist. A separate backend would split type definitions, double the deployment surface, and force an internal network contract for a v1 product that has no traffic to justify one. A cache layer would shadow bugs in the data layer. WebSockets would add operational complexity for a feature set that is satisfied by TanStack Query's polling interval. The simplest correct architecture for v1 is the one in Figure~\ref{fig:system}.
+
+% ============================================================================
+\section{Technology stack and rationale}
+
+\subsection{Core stack}
+
+The stack was fixed by the project brief and then validated against the Ponytail ladder. Each component answers a specific concern, and where two components could answer the same concern, we picked the one already installed.
+
+Next.js 16 with the App Router is the framework. It gives us server components for crawlable HTML, route handlers for the API surface, file-based routing, and first-class Vercel deployment. We do not use the edge runtime; route handlers run on the Node.js runtime because Prisma's SQLite driver and NextAuth's credentials provider both expect it.
+
+TypeScript is configured in strict mode. There are no \texttt{any} types in application code; trust-boundary inputs are parsed with Zod and the inferred type is propagated through the rest of the call. The TypeScript compiler is part of the CI gate and is treated as a test.
+
+Tailwind CSS 4 with the shadcn/ui component library (New York variant) handles the interface. Tailwind 4's design-token model is a good fit for a brand that needs a small number of roles reused consistently: canvas, ink, primary, line accents, and the standard semantic tokens. shadcn/ui is not a dependency in the npm sense; the component source lives in the repository under \texttt{components/ui} and is themed by editing tokens. That means our terracotta primary and metro-line accent colours are applied once, at the token layer, and propagate to every primitive.
+
+Prisma 6 is the ORM. We use it for typed queries, schema-as-documentation, and migration management. The Prisma client is a singleton in \texttt{lib/db.ts} to avoid exhausting SQLite connections in development, where Next.js hot-reloading can create many client instances if not guarded.
+
+SQLite is the development database. It is zero-infra: a single file at \texttt{db/custom.db}, ignored by git, populated by a seed script that creates the 39 station rows and three demo users. Production is portable to Turso (libSQL) or Postgres by changing the datasource provider and \texttt{DATABASE\_URL}; no schema changes are required. Section~8 describes the Vercel-specific limitation that motivates that migration.
+
+NextAuth.js v4 with the Credentials provider handles authentication. We use the JWT session strategy, not database sessions, so the deployment stays stateless and Vercel-friendly. Passwords are hashed with Node's built-in \texttt{scrypt} rather than bcrypt, to avoid native compilation on Vercel's build environment. Section~5 covers the hashing scheme and session shape in detail.
+
+TanStack Query manages server state on the client. All list and detail fetches go through it, with sensible \texttt{staleTime} values: 60 seconds for feeds, 30 seconds for carpool and buddy lists, and stale-while-revalidate for everything else. Optimistic updates are used sparingly; for v1 most mutations invalidate the relevant query keys and let the refetch settle the UI.
+
+Zustand holds client-side UI state that is not server state: the SOS dialog open flag, the active station filter, transient form values that span components. It is small and has no boilerplate, which is the point.
+
+Framer Motion is used at Level 1 only. Refined interface motion: hover, focus, press, dialog open and close, tab switch, section entry. We do not use it for hero animations, page transitions, or anything that would suggest a marketing site. \texttt{prefers-reduced-motion} is respected throughout; motion degrades to opacity-only or none.
+
+\subsection{What we deliberately did not add}
+
+The Ponytail ladder asks, for every candidate addition, whether it needs to exist. A separate backend service was the first candidate rejected. Next.js route handlers satisfy every API requirement and keep the deployment as one unit; a second service would split type definitions, double the deploy surface, and force an internal network contract for a v1 product with no traffic to justify one. A cache layer was the next. TanStack Query handles client caching, Prisma's connection handling is sufficient at v1 scale, and a cache layer would shadow data-layer bugs rather than fix them.
+
+WebSockets were considered for the carpool and buddy surfaces and rejected. Those surfaces are refresh-driven, with TanStack Query polling at 30 to 60 second intervals, and a websocket mini-service is a roadmap item only if real-time density demands it. A CMS, an email service, a payment provider, AI moderation, 3D or WebGL, and Storybook were each considered and rejected for v1 scope. Each is documented in the PRD as either an explicit non-goal or a roadmap item. The build does not carry the weight of features it does not yet need.
+
+\subsection{Dependency policy}
+
+Every dependency added during the build is justified against the ladder. No \texttt{any} types. No client-side AI SDK usage; the project rules forbid it. The \texttt{package-lock.json} is committed and \texttt{bun.lock} is removed so Vercel's resolution is deterministic and unambiguous.
+
+% ============================================================================
+\section{Data model}
+
+The Prisma schema at \texttt{prisma/schema.prisma} is the single source of truth. The model has ten entities that carry user-generated content, plus the static station directory. Their relationships are shown in Figure~\ref{fig:er}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize\sffamily,
+  >=Stealth,
+  entity/.style={draw=terracotta, line width=0.8pt, rounded corners=2pt,
+                 fill=terracotta!4, minimum width=24mm, minimum height=9mm,
+                 align=center, inner sep=3pt},
+  central/.style={draw=terracotta, line width=1.2pt, rounded corners=3pt,
+                  fill=terracotta!14, minimum width=24mm, minimum height=10mm,
+                  align=center, inner sep=3pt, font=\footnotesize\sffamily\bfseries},
+  child/.style={draw=slate, line width=0.7pt, rounded corners=2pt,
+                fill=canvas, minimum width=22mm, minimum height=9mm,
+                align=center, inner sep=3pt},
+  rel/.style={line width=0.55pt, draw=slate!80},
+  relkey/.style={line width=0.85pt, draw=terracotta!85},
+]
+  \node[central] (user) at (0,0) {User};
+  \node[entity] (station) at (0,2.5) {Station};
+  \node[entity] (post) at (-3.7,1.1) {Post};
+  \node[child]  (reply) at (-6.8,1.1) {Reply};
+  \node[entity] (carpool) at (-3.7,-1.1) {Carpool};
+  \node[child]  (carpooljoin) at (-6.8,-1.1) {CarpoolJoin};
+  \node[entity] (buddy) at (3.7,1.1) {BuddyRequest};
+  \node[entity] (lostfound) at (3.7,-1.1) {LostFound};
+  \node[entity] (market) at (0,-2.5) {Marketplace};
+  \node[entity] (contact) at (0,-4.2) {ContactRequest};
+  \node[entity] (rating) at (6.8,1.1) {Rating};
+  \node[entity] (report) at (6.8,-1.1) {Report};
+
+  % Edges (drawn behind nodes via the backgrounds layer)
+  \begin{pgfonlayer}{background}
+  % User relations (terracotta)
+  \draw[relkey] (user) -- (post);
+  \draw[relkey] (user) -- (carpool);
+  \draw[relkey] (user) -- (buddy);
+  \draw[relkey] (user) -- (lostfound);
+  \draw[relkey] (user) -- (market);
+  \draw[relkey] (user) -- (rating);
+  \draw[relkey] (user) -- (report);
+
+  % Station relations (slate)
+  \draw[rel] (station) -- (post);
+  \draw[rel] (station) -- (carpool);
+  \draw[rel] (station) -- (buddy);
+  \draw[rel] (station) -- (lostfound);
+  \draw[rel] (station) -- (market);
+
+  % Owned children
+  \draw[rel] (post) -- (reply);
+  \draw[rel] (carpool) -- (carpooljoin);
+
+  % Polymorphic-ish contact associations
+  \draw[rel, dashed] (carpool) -- (contact);
+  \draw[rel, dashed] (lostfound) -- (contact);
+  \draw[rel, dashed] (market) -- (contact);
+  \end{pgfonlayer}
+\end{tikzpicture}
+\caption{Entity-relationship diagram. Terracotta edges originate from \texttt{User}; slate edges from \texttt{Station} scope the user-generated content. Dashed edges show the polymorphic-ish contact-request association to \texttt{Carpool}, \texttt{LostFound}, and \texttt{Marketplace}. \texttt{Reply} and \texttt{CarpoolJoin} are owned children of \texttt{Post} and \texttt{Carpool} respectively. \texttt{ContactRequest} also carries \texttt{initiatorId} and \texttt{recipientId} foreign keys to \texttt{User} (omitted from the drawing for clarity).}
+\label{fig:er}
+\end{figure}
+
+\textbf{User} holds account credentials and the commuter profile: display name, home station, work or college station, usual travel window, bio, preferred language, an avatar (initials-based by default), and a cached \texttt{trustScore}. The \texttt{passwordHash} column is never selected in API responses.
+
+\textbf{Station} is the static seed of Indian metro stations. Each row has a unique code (for example \texttt{RJ-AI} for Rajiv Chowk, \texttt{CS-CB} for Cubbon Park), a name, a city, and one or more line labels. The seed covers 39 stations across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, and Kolkata. Station rows are read-only from the application; they are populated by the seed script and not modified at runtime.
+
+\textbf{Post} is the community feed. Posts can be scoped to a station or posted globally. They carry tags (help, info, alert, meetup, general), an optional image URL, and timestamps. \textbf{Reply} is one-to-many on Post. The original poster can mark a reply as the answer, in the style of a Q\&A thread.
+
+\textbf{Carpool} is the ride-share entity. It can be an offer or a request, with fields for origin station, destination area, departure time, seats, mode (auto, cab, personal vehicle), cost-split preference, and a women-only flag. \textbf{CarpoolJoin} is a separate entity representing a join request on a carpool; the poster accepts or declines. The lifecycle is \texttt{open} $\to$ \texttt{matched} $\to$ \texttt{completed}, or \texttt{open} $\to$ \texttt{expired}.
+
+\textbf{BuddyRequest} is the travel-companion entity. It is distinct from Carpool because no vehicle is implied; it is purely about finding company for the metro ride itself, often for safety on an early-morning or late-evening leg. It supports a women-only filter. Lifecycle matches Carpool.
+
+\textbf{LostFound} covers lost and found items. Two post types, lost something or found something, share the same table distinguished by a type field. Fields include item category, description, station, date, contact preference, and a status that progresses \texttt{active} $\to$ \texttt{reunited} $\to$ \texttt{closed}.
+
+\textbf{Marketplace} is the local classifieds surface. Listings carry a title, description, price in INR, category, station catchment, condition, image URL, and a status of \texttt{available} $\to$ \texttt{reserved} $\to$ \texttt{sold}. No money flows through the platform; the listing expresses intent, and the transaction happens offline or via UPI directly between parties.
+
+\textbf{ContactRequest} is the opt-in contact flow. It is polymorphic-ish: a single table with a \texttt{contextType} (carpool, lost-found, marketplace) and a \texttt{contextId}, plus \texttt{initiatorId} and \texttt{recipientId}. Contact information is not exposed until the recipient accepts. This is the trust primitive that the safety-sensitive features depend on.
+
+\textbf{Rating} is the post-interaction rating. Both parties can rate each other 1 to 5 and leave a short note after a completed carpool, buddy match, or marketplace deal. Ratings feed into the trust score. \textbf{Report} is the moderation queue. Any user can flag any piece of user-generated content; the report row stores the reporter, the target, the reason, and a status. v1 has no automated action; reports are reviewed manually.
+
+\subsection{Trust score}
+
+Trust is computed in \texttt{lib/trust.ts} as a 0--100 score per user:
+
+\[
+\textit{trustScore} = \mathrm{clamp}\!\left(
+  b_{\text{profile}} + 4 \cdot \overline{r} + 0.2 \cdot n_{\text{completed}} - p_{\text{reports}},
+  \, 0,\, 100
+\right)
+\]
+
+The score is recomputed on rating and report events and cached on the User row. It is intentionally simple and explainable; a learned model is a roadmap item, not a v1 feature. The constants are tuned by hand so that a new user with a complete profile and one five-star rating lands around 60, which is the threshold at which the verified-commuter badge appears.
+
+\subsection{Indices and query patterns}
+
+The schema defines indices for the actual query patterns: \texttt{Station(code)} unique, \texttt{Station(city, name)} composite for directory queries, \texttt{Post(stationId, createdAt)} for feed ordering, \texttt{Carpool(originStationId, status, departAt)} for active rides from a station, \texttt{LostFound} and \texttt{Marketplace} with \texttt{(stationId, category, status)} for filtering, and \texttt{Rating(ratedUserId)} for the trust-score aggregate. There are no joins that scan large tables; every list endpoint has a supporting index.
+
+% ============================================================================
+\section{Authentication and session design}
+
+\subsection{Provider and hashing}
+
+Authentication uses NextAuth.js v4 with the Credentials provider. Passwords are hashed with Node's built-in \texttt{scrypt}, not bcrypt, because bcrypt requires native compilation and Vercel's build environment does not reliably have the toolchain for it. \texttt{scrypt} is in \texttt{node:crypto}, ships with Node, and is more than adequate for a v1 password hashing workload. The hash format is \texttt{scrypt\$<salt>\$<hash>}, stored in \texttt{User.passwordHash}.
+
+The registration flow (Figure~\ref{fig:auth}) is: client posts to \texttt{/api/auth/register} with a Zod-validated payload; the handler checks email uniqueness, generates a salt, computes the scrypt hash, writes the User row, and returns a success envelope without ever selecting \texttt{passwordHash} in the response. The client then calls NextAuth's \texttt{signIn} with the credentials provider, which invokes the \texttt{authorize} callback. The callback looks up the user by email, splits the stored hash, recomputes the scrypt hash of the submitted password with the stored salt, and compares in constant time. On success it returns the user object; on failure it returns null and NextAuth surfaces a generic invalid-credentials error.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  >=Stealth,
+  proc/.style={draw=terracotta, line width=0.8pt, rounded corners=3pt,
+               fill=terracotta!4, minimum width=30mm, minimum height=12mm,
+               align=center, inner sep=3pt, font=\footnotesize\sffamily},
+  trigger/.style={draw=terracotta, line width=1.0pt, rounded corners=10mm,
+                  fill=terracotta!14, minimum width=28mm, minimum height=12mm,
+                  align=center, inner sep=3pt, font=\footnotesize\sffamily\bfseries},
+  arr/.style={->, line width=0.7pt, draw=slate, >=Stealth},
+  lbl/.style={font=\scriptsize\sffamily, text=slate, fill=white, inner sep=1pt},
+]
+  \node[trigger] (reg) at (0,0) {Register};
+  \node[proc, right=8mm of reg] (val) {Zod validate\\\scriptsize email + password};
+  \node[proc, right=8mm of val] (salt) {Generate salt\\\scriptsize node:crypto};
+  \node[proc, right=8mm of salt] (ins) {INSERT User\\\scriptsize passwordHash};
+
+  \node[proc, below=12mm of ins] (signin) {NextAuth signIn\\\scriptsize Credentials provider};
+  \node[proc, left=8mm of signin] (auth) {authorize()\\\scriptsize recompute + compare};
+  \node[proc, left=8mm of auth] (jwt) {Issue JWT\\\scriptsize httpOnly cookie};
+  \node[trigger, left=8mm of jwt] (sess) {Session};
+
+  \draw[arr] (reg) -- (val);
+  \draw[arr] (val) -- (salt);
+  \draw[arr] (salt) -- (ins);
+  \draw[arr] (ins) -- (signin);
+  \draw[arr] (signin) -- (auth);
+  \draw[arr] (auth) -- node[lbl, above]{match} (jwt);
+  \draw[arr] (jwt) -- (sess);
+\end{tikzpicture}
+\caption{Authentication flow. Registration writes a scrypt-hashed password; the subsequent NextAuth sign-in recomputes and compares in constant time, then issues a JWT in an httpOnly cookie.}
+\label{fig:auth}
+\end{figure}
+
+\subsection{Session shape}
+
+The session strategy is JWT, stored in an httpOnly secure cookie signed with \texttt{NEXTAUTH\_SECRET}. The JWT callback enriches the token with \texttt{user.id}, \texttt{user.name}, \texttt{user.homeStationId}, and \texttt{user.trustScore}, so server components and API routes can read these without an extra database hit. The session callback exposes the same fields to the client.
+
+\subsection{Protected routes}
+
+The \texttt{(app)} route group requires a session; middleware redirects unauthenticated users to \texttt{/login} with a \texttt{callbackUrl}. API routes under \texttt{/api/*}, except \texttt{/api/auth/*} and the public read endpoints, require a valid session. There is no per-route role system in v1; all authenticated users have the same capabilities, and trust signals (the score, the badge) are advisory rather than gating.
+
+\subsection{Trust score as session data}
+
+Carrying the trust score in the session is a deliberate trade-off. It means the score can be stale by up to the JWT expiry window, but it avoids a database read on every authenticated request. For v1, with a 30-day session and a score that changes slowly, this is acceptable. If trust ever gates a write, for example requiring a minimum score to post a carpool, we will re-read the user row at the handler level rather than trust the JWT.
+
+% ============================================================================
+\section{API design}
+
+\subsection{Conventions}
+
+The API is REST-style route handlers under \texttt{/api/*}. GET endpoints are public for read where the PRD allows (stations, public feed); POST and PATCH require a session. Every response follows the envelope \texttt{\{ ok: boolean, data?: T, error?: string \}}, which gives the client one shape to parse and one field to branch on. Zod schemas in \texttt{lib/validators.ts} are imported by both the client form and the server handler, so the validation contract is a single source of truth rather than a reimplementation.
+
+The endpoint map covers auth, stations, feed (with replies and reports), carpools (with joins), buddies, lost-found (with contact), marketplace (with contact), ratings, contacts, reports, and user profiles. The full list is in the TechRD; the shape is consistent across all of them.
+
+\subsection{Validation contract}
+
+Every write endpoint follows the same five steps: parse the body with a Zod schema; return 400 with \texttt{ok:false} and the parse error on failure; authorise against the session; perform the database write inside a try/catch, returning 500 only for genuinely unexpected errors and never leaking the message; return 200 or 201 with \texttt{ok:true} and the data on success. The handler is thin; the schema is the contract.
+
+Listing~\ref{lst:zod} shows the Zod schema for carpool creation, and Listing~\ref{lst:handler} shows the corresponding route handler. The schema is imported by both the client form (via a Zod resolver for react-hook-form) and the server handler, so the two cannot drift.
+
+\begin{lstlisting}[caption={Zod schema for carpool creation (excerpt from \texttt{lib/validators.ts}).},label={lst:zod}]
+import { z } from "zod";
+
+export const createCarpoolSchema = z.object({
+  originStationId: z.string().min(1),
+  destinationArea: z.string().min(3).max(120),
+  departAt: z.coerce.date(),
+  seats: z.number().int().min(1).max(6),
+  mode: z.enum(["auto", "cab", "personal"]),
+  costSplit: z.enum(["split", "exact", "free"]).default("split"),
+  womenOnly: z.boolean().default(false),
+  type: z.enum(["offer", "request"]),
+});
+
+export type CreateCarpoolInput = z.infer<typeof createCarpoolSchema>;
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Route handler for \texttt{POST /api/carpools} (excerpt).},label={lst:handler}]
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { createCarpoolSchema } from "@/lib/validators";
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+  const parsed = createCarpoolSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: parsed.error.message },
+      { status: 400 }
+    );
+  }
+  try {
+    const carpool = await prisma.carpool.create({
+      data: { ...parsed.data, userId: session.user.id },
+    });
+    return NextResponse.json(
+      { ok: true, data: carpool },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error("createCarpool failed", err);
+    return NextResponse.json(
+      { ok: false, error: "Internal error" },
+      { status: 500 }
+    );
+  }
+}
+\end{lstlisting}
+
+\subsection{Request flow}
+
+Figure~\ref{fig:sequence} traces a representative write: Devika, the primary persona, posts a carpool request. The browser POSTs to \texttt{/api/carpools}; the route handler hands the body to the Zod schema, which either returns a parsed value or surfaces a 400. The handler then calls \texttt{prisma.carpool.create}, which issues an INSERT against SQLite. On success the handler returns 201 with the standard envelope; the client's TanStack Query mutation invalidates the relevant query keys and the list refetches.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  >=Stealth,
+  actor/.style={draw=terracotta, line width=0.8pt, rounded corners=3pt,
+                fill=terracotta!8, minimum width=22mm, minimum height=10mm,
+                align=center, inner sep=3pt, font=\footnotesize\sffamily\bfseries},
+  lifeline/.style={draw=slate!40, line width=0.4pt, dashed},
+  msg/.style={->, line width=0.7pt, draw=slate, >=Stealth},
+  msglabel/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt},
+]
+  \node[actor] (b) at (0,0)    {Browser};
+  \node[actor] (r) at (3.4,0)  {Route\\Handler};
+  \node[actor] (z) at (6.8,0)  {Zod};
+  \node[actor] (p) at (10.2,0) {Prisma};
+  \node[actor] (d) at (13.6,0) {SQLite};
+
+  \foreach \x in {0, 3.4, 6.8, 10.2, 13.6} {
+    \draw[lifeline] (\x,-0.5) -- (\x,-7.2);
+  }
+
+  \draw[msg] (0,-1.0)    -- node[msglabel]{POST /api/carpools} (3.4,-1.0);
+  \draw[msg] (3.4,-1.8)  -- node[msglabel]{parse(body)} (6.8,-1.8);
+  \draw[msg] (6.8,-2.6)  -- node[msglabel]{parsed or 400} (3.4,-2.6);
+  \draw[msg] (3.4,-3.6)  -- node[msglabel]{create(\ldots)} (10.2,-3.6);
+  \draw[msg] (10.2,-4.4) -- node[msglabel]{INSERT} (13.6,-4.4);
+  \draw[msg] (13.6,-5.2) -- node[msglabel]{row} (10.2,-5.2);
+  \draw[msg] (10.2,-6.0) -- node[msglabel]{carpool} (3.4,-6.0);
+  \draw[msg] (3.4,-6.8)  -- node[msglabel]{201 \{ok:true, data\}} (0,-6.8);
+\end{tikzpicture}
+\caption{Request flow for a representative write: Devika posts a carpool request. The handler validates with Zod, persists via Prisma, and returns the standard envelope. Return arrows (right to left) are responses.}
+\label{fig:sequence}
+\end{figure}
+
+\subsection{Errors and the envelope}
+
+The \texttt{ok} flag is the contract. A 200 with \texttt{ok:false} is impossible by construction: parse failures return 400, authorisation failures return 401, and unexpected failures return 500. The client therefore checks \texttt{response.ok} first, then \texttt{payload.ok}, and only then reads \texttt{payload.data}. This is verbose in the calling code but unambiguous, and the TanStack Query wrappers hide most of it.
+
+% ============================================================================
+\section{Frontend architecture}
+
+\subsection{Route groups}
+
+The App Router uses three route groups, which do not affect the URL: \texttt{(public)} for the landing page, station directory, public station pages, and about; \texttt{(auth)} for login and register with minimal chrome; and \texttt{(app)} for the authenticated dashboard and feature surfaces. Public routes are server-rendered for crawlability and carry per-route metadata. Auth routes are a server-rendered shell with a client form, so the auth logic never ships to the browser. App routes are server-rendered lists with client interactivity layered on top.
+
+\subsection{Rendering strategy}
+
+The split is deliberate. The landing page, the station directory, and public station pages must be crawlable and fast on a slow mobile connection, so they are pure server components with metadata. The dashboard and the feature surfaces (feed, carpools, buddies, lost-found, marketplace) are server-rendered for the first paint, then hydrate TanStack Query for subsequent interactions. This balances crawlability of the public parts with the interactivity the application surfaces need.
+
+\subsection{State management}
+
+Server state is TanStack Query, with \texttt{staleTime} values tuned per surface: 60 seconds for feeds, 30 seconds for carpool and buddy lists. Client UI state is Zustand, used sparingly for cross-component concerns like the SOS dialog open flag and the active station filter. Form state is react-hook-form with a Zod resolver; forms call API routes via TanStack Query mutations, and successful mutations invalidate the relevant query keys.
+
+\subsection{Component contract}
+
+shadcn/ui primitives are the only button, card, dialog, input, and so on used in the application. There are no custom re-implementations. Feature components such as \texttt{CarpoolCard}, \texttt{FeedItem}, and \texttt{StationHeader} live under \texttt{components/<feature>} and accept typed props. Every data-driven component has empty, loading, and error states; this is mandatory, not optional, and is checked in review. Every interactive element is keyboard-operable with a visible focus ring.
+
+\subsection{Motion level}
+
+Motion is Level 1: refined interface motion only. Hover, focus, press, dialog open and close, tab switch, section entry. There is a small amount of directional motion, an x-axis slide for arriving content, that echoes the metro motif without becoming a gimmick. \texttt{prefers-reduced-motion} is respected; all motion degrades to opacity-only or none.
+
+% ============================================================================
+\section{Deployment and CI/CD}
+
+\subsection{Package manager and lockfile}
+
+npm is the package manager of record. \texttt{package-lock.json} is committed; \texttt{bun.lock} was removed. The reason is operational: Vercel's build resolution is deterministic with npm and a committed lockfile, and bun's lockfile resolution has been observed to be ambiguous in some Vercel configurations. The build script is plain \texttt{next build}, with no standalone output and no custom copy step, so Vercel's default Next.js builder works without a \texttt{vercel.json} override.
+
+\subsection{Topology}
+
+Figure~\ref{fig:topology} shows the deployment topology. A push or pull request to \texttt{main} on GitHub triggers the GitHub Actions workflow. The workflow runs the CI gate; on push to \texttt{main} only, it additionally deploys to Vercel. Vercel builds the Next.js application and serves it from its edge network. The database in production is, for v1, an ephemeral SQLite file under \texttt{/tmp}, with a documented migration path to Turso or Postgres.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  >=Stealth,
+  box/.style={draw=terracotta, line width=0.8pt, rounded corners=4pt,
+              fill=canvas, minimum width=34mm, minimum height=12mm,
+              align=center, inner sep=4pt},
+  accent/.style={draw=terracotta, line width=1.0pt, rounded corners=4pt,
+                 fill=terracotta!10, minimum width=34mm, minimum height=12mm,
+                 align=center, inner sep=4pt},
+  arr/.style={->, line width=0.7pt, draw=slate, >=Stealth},
+  lbl/.style={font=\scriptsize\sffamily, text=slate, fill=white, inner sep=1pt},
+]
+  \node[box] (repo) at (0,0) {\textbf{GitHub repository}\\\scriptsize main branch};
+  \node[box] (gha) at (0,-2.0) {\textbf{GitHub Actions}\\\scriptsize ci.yml};
+  \node[accent] (vercel) at (0,-4.0) {\textbf{Vercel}\\\scriptsize Next.js build \textperiodcentered{} edge};
+  \node[box] (sqlite) at (-3.0,-6.0) {\textbf{SQLite}\\\scriptsize /tmp (ephemeral)};
+  \node[box] (turso) at (3.0,-6.0) {\textbf{Turso / Postgres}\\\scriptsize target};
+
+  \draw[arr] (repo) -- node[lbl, right]{push / PR} (gha);
+  \draw[arr] (gha) -- node[lbl, right]{CI passes, main only} (vercel);
+  \draw[arr] (vercel) -- (sqlite);
+  \draw[arr, dashed, draw=terracotta] (vercel) -- node[lbl, right]{migration path} (turso);
+\end{tikzpicture}
+\caption{Deployment topology. Pushes to \texttt{main} trigger the GitHub Actions pipeline, which on a green build deploys to Vercel. Production data is ephemeral on Vercel's read-only filesystem; the dashed edge marks the documented migration to Turso or Postgres.}
+\label{fig:topology}
+\end{figure}
+
+\subsection{CI/CD pipeline}
+
+A single GitHub Actions workflow at \texttt{.github/workflows/ci.yml} runs on every push and pull request to \texttt{main}. The steps are shown in Figure~\ref{fig:cicd}: checkout, set up Node 20, \texttt{npm ci}, \texttt{npm run lint}, \texttt{npx tsc --noEmit}, \texttt{npx prisma generate}, \texttt{npm run build}. On push to \texttt{main} only, an additional job deploys to Vercel via the Vercel CLI using \texttt{VERCEL\_TOKEN}, \texttt{VERCEL\_ORG\_ID}, and \texttt{VERCEL\_PROJECT\_ID} secrets, targeting production.
+
+We deliberately avoided a separate \texttt{deploy.yml}. The Ponytail principle is to not scaffold for a speculative future; one workflow that covers lint, type-check, build, and deploy keeps the pipeline auditable in a single file, and a future split, if it ever becomes necessary, is a small refactor.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  >=Stealth,
+  proc/.style={draw=terracotta, line width=0.8pt, rounded corners=3pt,
+               fill=terracotta!4, minimum width=26mm, minimum height=11mm,
+               align=center, inner sep=3pt, font=\footnotesize\sffamily},
+  trigger/.style={draw=terracotta, line width=1.0pt, rounded corners=10mm,
+                  fill=terracotta!14, minimum width=26mm, minimum height=11mm,
+                  align=center, inner sep=3pt, font=\footnotesize\sffamily\bfseries},
+  note/.style={draw=slate, dashed, line width=0.6pt, rounded corners=2pt,
+               fill=canvas, minimum width=22mm, minimum height=10mm,
+               align=center, inner sep=3pt, font=\scriptsize\sffamily, text=slate},
+  arr/.style={->, line width=0.7pt, draw=slate, >=Stealth},
+]
+  \node[trigger] (push) at (0,0)    {push / PR to main};
+  \node[proc]    (ci)   at (3.8,0)  {npm ci};
+  \node[proc]    (lint) at (7.6,0)  {npm run lint};
+  \node[proc]    (tsc)  at (11.4,0) {tsc {-}{-}noEmit};
+  \node[proc]    (pris) at (11.4,-2.2) {prisma generate};
+  \node[proc]    (bld)  at (7.6,-2.2)  {next build};
+  \node[trigger] (dep)  at (3.8,-2.2)  {Vercel deploy};
+  \node[note]    (nt)   at (0,-2.2)    {main only};
+
+  \draw[arr] (push) -- (ci);
+  \draw[arr] (ci)   -- (lint);
+  \draw[arr] (lint) -- (tsc);
+  \draw[arr] (tsc)  -- (pris);
+  \draw[arr] (pris) -- (bld);
+  \draw[arr] (bld)  -- (dep);
+  \draw[arr, dashed] (dep) -- (nt);
+\end{tikzpicture}
+\caption{CI/CD pipeline. A single workflow runs lint, type-check, Prisma generation, and build on every push and PR. The deploy step runs only on \texttt{main}.}
+\label{fig:cicd}
+\end{figure}
+
+\subsection{The database limitation}
+
+Vercel's filesystem is read-only except for \texttt{/tmp}. SQLite works locally and during a single warm Vercel instance, but data does not persist across cold starts in production. We document this honestly rather than pretend otherwise: v1 on Vercel has an ephemeral database. The seed script runs on cold start, so the application always has its 39 stations and three demo users, but user-generated content does not survive a redeploy.
+
+The migration path is documented and intentionally not auto-applied. Switching to Turso (libSQL) or Postgres requires changing the Prisma datasource provider and the \texttt{DATABASE\_URL} environment variable. No application code changes, no schema changes. The schema uses only portable types; there are no SQLite-specific JSON-array primitives that would not migrate. Section~11 covers the roadmap.
+
+% ============================================================================
+\section{Security and privacy}
+
+Passwords are hashed with scrypt, not stored in cleartext, and never selected in API responses. Sessions are JWTs in httpOnly secure cookies, signed with \texttt{NEXTAUTH\_SECRET}, with NextAuth's built-in CSRF protection enabled. Every write endpoint parses its body with Zod; no route handler reads \texttt{req.body} directly. A serialiser helper strips sensitive fields from User and other entities before they leave the process.
+
+Contact information is never exposed until both parties accept a ContactRequest. The trust primitives (ratings, reports, the trust score) are advisory in v1 but visible, so a user can make an informed decision about whether to share a ride or meet at a station. The SOS shortcut on every authenticated screen surfaces the user's last station and a prompt to share live location or call 112; on the web this is informational and uses device capabilities where available.
+
+Reports are stored with the reporter ID for audit. There is no automated action in v1; reports go into a manual queue. Rate limiting is not implemented in v1 and is documented as a limitation. No third-party analytics or tracking is shipped in v1. The \texttt{.env} file, the SQLite database file, \texttt{node\_modules}, and the \texttt{.next} build output are gitignored and never committed.
+
+% ============================================================================
+\section{Accessibility and performance}
+
+The accessibility contract is non-negotiable. Semantic landmarks (\texttt{header}, \texttt{main}, \texttt{nav}, \texttt{footer}) on every page; logical heading order preserved per route; keyboard-operable controls with visible focus rings; touch targets at least 44 pixels; AA contrast on all text; \texttt{prefers-reduced-motion} respected; no colour-only meaning, so line colours are always paired with a label. These are checked in review, not bolted on at the end.
+
+Performance targets for v1: largest contentful paint under 2.5 seconds on a typical 4G mobile profile, cumulative layout shift under 0.1, interaction to next paint under 200 milliseconds. Public pages are server-rendered for fast first paint and crawlability. Image and font budgets are kept proportionate; there is no decorative WebGL in v1, and the metro-line motif is delivered with CSS and SVG rather than canvas. The application is verified at 390, 768, and 1440 pixels, and at intermediate widths where wrapping can fail.
+
+% ============================================================================
+\section{Limitations and future work}
+
+v1 has known limits. We list them honestly.
+
+The Vercel filesystem limitation makes SQLite ephemeral in production. The migration to Turso or Postgres is documented and small (a datasource change and an environment variable), but until it is applied, user-generated content does not survive a redeploy. This is the single most important limitation to fix before any real user is onboarded.
+
+There is no rate limiting on the API. A determined abuser could spam registrations or feed posts; NextAuth's built-in CSRF protection mitigates the worst classes of attack, but a proper rate-limit layer is a v1.1 item. Content moderation is manual: the report queue exists, but no automated classification or filtering is applied to user-generated content. AI-assisted moderation is a roadmap item, to be considered only when there is enough traffic to train and evaluate a model honestly.
+
+There are no native mobile apps. The web app is responsive and PWA-ready in metadata, but the delivery target for v1 is a web deployment. A PWA install flow and offline-first behaviour are roadmap items. Real-time train and crowd data is out of scope; v1 is community-led, and metro corporation partnerships for live data are a future cycle. There is no in-app payment; marketplace listings express intent, and transactions happen offline or via UPI directly between parties. In-app UPI escrow is a roadmap item.
+
+Localisation is English-only in v1. The schema and UI strings are structured so Hindi and one regional language per launch city can be added without schema changes. The trust score is a hand-tuned linear function; a learned model is a roadmap item, to be considered only when there is enough data to train one honestly.
+
+% ============================================================================
+\section{Conclusion}
+
+MetroMitra v1.0 is a deliberate, minimal build that tests a specific product thesis: that the metro station is a viable primary unit of community for Indian commuters. The architecture reflects that minimality. One Next.js process, one database through Prisma, one auth provider, one CI pipeline, one deploy target. Every additional piece of infrastructure was considered against the Ponytail ladder and, for v1, rejected. This document records not only what we built but what we chose not to build, and why.
+
+The known limits (ephemeral SQLite on Vercel, manual moderation, no rate limiting, English-only) are documented here and in the README. The migration paths are documented too. What v1 delivers is a deployed, usable, accessible web application that lets a real Indian metro commuter register, anchor to a station, post a carpool, find a buddy, list a lost item, browse a local marketplace, and rate a fellow commuter. That is enough to test the thesis. Everything beyond it is roadmap.
+
+% ============================================================================
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+  \item MetroMitra Product Requirements Document, \texttt{docs/PRD.md}.
+  \item MetroMitra Technical Requirements Document, \texttt{docs/TechRD.md}.
+  \item Ponytail SKILL: simplest correct implementation ladder, \texttt{docs/reference/Ponytail-SKILL.md}.
+  \item Master Playbook, \texttt{docs/reference/Master-Playbook.md}.
+  \item Anti-patterns reference, \texttt{docs/reference/anti-patterns.md}.
+  \item Next.js App Router documentation, \url{https://nextjs.org/docs/app}.
+  \item Prisma documentation, \url{https://www.prisma.io/docs}.
+  \item NextAuth.js v4 documentation, \url{https://next-auth.js.org}.
+  \item Node.js \texttt{crypto.scrypt} documentation, \url{https://nodejs.org/api/crypto.html\#cryptoscrypt}.
+  \item Vercel deployment documentation, \url{https://vercel.com/docs}.
+  \item Turso (libSQL) documentation, \url{https://docs.turso.tech}.
+  \item TanStack Query documentation, \url{https://tanstack.com/query/latest}.
+\end{enumerate}
+
+\end{document}
