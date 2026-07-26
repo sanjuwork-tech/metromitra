@@ -86,3 +86,10 @@ Caddyfile
 
 # Worklog (coordination scratch, not application source)
 worklog.md
+
+# Internal docs (PRD, TechRD, LaTeX, reference playbooks) — kept local only
+/docs/
+AGENTS.md
+
+# Old scaffold logo (replaced by favicon.svg)
+public/logo.svg

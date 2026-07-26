@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   authors: [{ name: "MetroMitra" }],
   creator: "MetroMitra",
   icons: {
-    icon: "/logo.svg",
+    icon: "/favicon.svg",
   },
   openGraph: {
     title: "MetroMitra — Find your people on the line you already ride",

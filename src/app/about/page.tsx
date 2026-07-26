@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { Button } from "@/components/ui/button";
-import { Train, FileText, Github, Code2 } from "lucide-react";
+import { Train, Github, Code2 } from "lucide-react";
 import { STATIONS } from "@/lib/stations-data";
 
 export const metadata = {
@@ -56,18 +56,11 @@ export default function AboutPage() {
               MetroMitra is a Next.js 16 application with TypeScript, Tailwind CSS 4, shadcn/ui,
               and Zustand for local browser storage. It runs with no backend, no database and no
               API — all data lives in your browser — and is deployed to Vercel through an
-              automated GitHub Actions CI/CD pipeline. The full product and technical rationale is
-              documented in the repository&rsquo;s <code className="rounded bg-muted px-1.5 py-0.5 text-xs">docs/</code> folder.
+              automated GitHub Actions CI/CD pipeline.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm">
-                <Link href="/docs/PRD.md" target="_blank"><FileText className="mr-1.5 h-4 w-4" /> PRD</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/docs/TechRD.md" target="_blank"><FileText className="mr-1.5 h-4 w-4" /> TechRD</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="https://github.com" target="_blank" rel="noreferrer"><Github className="mr-1.5 h-4 w-4" /> Source</Link>
+                <Link href="https://github.com/sanjuwork-tech/metromitra" target="_blank" rel="noreferrer"><Github className="mr-1.5 h-4 w-4" /> Source on GitHub</Link>
               </Button>
             </div>
           </section>

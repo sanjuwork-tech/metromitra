@@ -4,36 +4,6 @@
 
 MetroMitra is a hyperlocal community web application built around **Indian metro rail stations**. It turns a daily, solitary commute into a connected experience — share a last-mile auto, post an entrepreneurial idea and find a co-founder among the people riding your line, recover a dropped wallet, and trade within your station's community, all anchored to the station you pass through every day.
 
-This repository contains the complete application: product documentation (PRD), technical documentation (TechRD), a LaTeX architecture document with TikZ diagrams, an automated CI/CD pipeline, and the deployable Next.js application itself.
-
----
-
-## What's inside
-
-```
-metromitra/
-├── docs/
-│   ├── PRD.md                              # Product requirements, market research, features
-│   ├── TechRD.md                           # Technical architecture, stack, data model
-│   ├── architecture/
-│   │   └── MetroMitra-Architecture.tex     # LaTeX document with TikZ diagrams (→ PDF)
-│   └── reference/                          # The playbooks that guided this build
-├── src/
-│   ├── app/                                # Next.js App Router (pages only — no API routes)
-│   │   ├── (public pages)                  # landing, stations, about — server-rendered from static data
-│   │   ├── login, register                 # client-side auth
-│   │   └── dashboard, carpools, ideas,     # authenticated app — client components
-│   │       lost-found, marketplace, feed, profile
-│   ├── components/                         # UI (shadcn/ui + feature components)
-│   └── lib/
-│       ├── store.ts                        # Zustand store + manual localStorage sync
-│       ├── auth-client.tsx                 # client-side demo auth context
-│       └── stations-data.ts                # 80 static metro stations across 6 cities
-├── .github/workflows/ci.yml                # CI/CD: lint → typecheck → build → deploy
-├── vercel.json                             # Vercel deployment config
-└── package.json                            # npm-managed dependencies
-```
-
 ---
 
 ## Architecture (no backend, no database, no API)
@@ -42,11 +12,11 @@ MetroMitra runs **entirely in the browser**. There is no server, no database, an
 
 - All data (accounts, posts, rides, ideas, listings, contact requests) lives in a **Zustand store** that is **manually synced to `localStorage`**.
 - **Stations are static reference data** — 80 real metro stations across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, and Kolkata, compiled into `src/lib/stations-data.ts`.
-- **Authentication is client-side** — register, login, and logout write to the store. Passwords are hashed with a lightweight demo hash (not production-secure; see TechRD §10).
+- **Authentication is client-side** — register, login, and logout write to the store. Passwords are hashed with a lightweight demo hash (not production-secure).
 - Public pages (landing, station directory, about) are **server-rendered** from the static station data for SEO. Authenticated app pages are **client components** that read the store.
 - Deployed to **Vercel** as a standard Next.js build. No database to provision, no environment secrets required.
 
-This makes the app **zero-setup**: `npm install && npm run dev` and it works. Data persists per-browser via localStorage but does not sync across devices. See the TechRD for the honest limitations and the migration path to a real backend if the product were to scale.
+This makes the app **zero-setup**: `npm install && npm run dev` and it works. Data persists per-browser via localStorage but does not sync across devices.
 
 ---
 
@@ -125,40 +95,18 @@ You can also register a new account — it will be stored in your browser's loca
 
 ---
 
-## Documentation
-
-| Document | Path | Purpose |
-|---|---|---|
-| Product Requirements | `docs/PRD.md` | What MetroMitra is, who it's for, what it does |
-| Technical Requirements | `docs/TechRD.md` | Architecture, stack, data model, client-side data layer |
-| LaTeX architecture document | `docs/architecture/MetroMitra-Architecture.tex` | Engineering document with TikZ diagrams (compile to PDF with `pdflatex`, `xelatex`, or `tectonic`) |
-| Reference playbooks | `docs/reference/` | The Master Playbook, Ponytail skill, and anti-pattern notes that guided the build |
-
-To compile the LaTeX document:
-
-```bash
-cd docs/architecture
-pdflatex MetroMitra-Architecture.tex
-pdflatex MetroMitra-Architecture.tex   # second pass for TOC + refs
-# or, if you use tectonic:
-tectonic MetroMitra-Architecture.tex
-```
-
----
-
 ## Production deployment (Vercel)
 
 MetroMitra is configured for deployment to Vercel via GitHub Actions CI/CD.
 
 ### One-time setup
 
-1. **Fork or push** this repository to GitHub.
-2. **Create a Vercel project** at <https://vercel.com/new> linked to the repository.
-3. **Copy the Vercel IDs** from Project → Settings → General:
+1. **Create a Vercel project** at <https://vercel.com/new> linked to the repository.
+2. **Copy the Vercel IDs** from Project → Settings → General:
    - `VERCEL_ORG_ID` (your team/user ID)
    - `VERCEL_PROJECT_ID` (the project ID)
-4. **Create a Vercel token** at <https://vercel.com/account/tokens>.
-5. **Add GitHub secrets** (repository → Settings → Secrets and variables → Actions):
+3. **Create a Vercel token** at <https://vercel.com/account/tokens>.
+4. **Add GitHub secrets** (repository → Settings → Secrets and variables → Actions):
    - `VERCEL_TOKEN`
    - `VERCEL_ORG_ID`
    - `VERCEL_PROJECT_ID`
@@ -205,7 +153,7 @@ vercel --prod # production deploy
 - Passwords are hashed with a lightweight demo hash (djb2-style), not bcrypt/argon2.
 - Contact information is never exposed until both parties accept a contact request.
 - No real payments are processed.
-- A production version would need: a real backend, server-side hashed passwords, a managed database, rate limiting, HTTPS-only cookies, and server-side validation. See TechRD §10 for the migration path.
+- A production version would need: a real backend, server-side hashed passwords, a managed database, rate limiting, HTTPS-only cookies, and server-side validation.
 
 ---
 
